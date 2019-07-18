@@ -1,0 +1,72 @@
+#coding=utf-8
+from numpy import *
+from matplotlib import pyplot as plt
+#加载文件，将数据保存成矩阵形式
+def loadDataSet(fileName):
+     dataMat = []#定义数组存放数据
+     fr = open(fileName)#打开文件
+     for line in fr.readlines():
+          curLine = line.strip().split(' ')#将每一行数据以空格分割
+          fltLine = list(map(float, curLine))#把curLine列表中的元素转化成float再返回
+          dataMat.append(fltLine)
+     return dataMat
+
+#计算两个向量的距离，用的是欧几里得距离
+def distEclud(vecA, vecB):
+    return sqrt(sum(power(vecA - vecB, 2)))
+
+#随机生成初始的质心（随机选K个点）
+def randCent(dataSet, k):  # 参数是  数据集，矩阵形式   K 质心的个数
+     n = shape(dataSet)[1]  # 获取矩阵的列数， 即数据集的特征数目
+     centroids = mat(zeros((k,n)))  # 构建K行N列零矩阵用来存放质心
+     for j in range(n):
+         minJ = min(dataSet[:,j]) # 获取每个特征的最小值 （矩阵每一列的最小值）
+         rangeJ = float(max(array(dataSet)[:,j]) - minJ) # 获取每个特征的范围 最大值减去最小值
+         centroids[:,j] = minJ + rangeJ * random.rand(k,1)
+     return centroids #返回随机选取的质心集合，是一个矩阵的形式
+
+def kMeans(dataSet, k, distMeas=distEclud, createCent=randCent):
+     m = shape(dataSet)[0] #读取矩阵第一维的长度
+     clusterAssment = mat(zeros((m,2))) #要为每个样本建立一个簇索引和相对的误差，所以需要m行的矩阵，m就是样本数
+     centroids = createCent(dataSet, k)  #调用随机产生质心的函数
+     clusterChanged = True
+     while clusterChanged:
+         clusterChanged = False
+         for i in range(m):#遍历数据集中的所有点
+             minDist = inf
+             minIndex = -1  #初始化最小值
+             for j in range(k): #遍历所有质心
+                 distJI = distMeas(centroids[j,:],dataSet[i,:]) #计算样本i到质心j的距离
+                 if distJI < minDist:   # 如果距离小于最小距离
+                     minDist = distJI; minIndex = j # 找出距离当前样本最近的那个质心
+             if clusterAssment[i,0] != minIndex: #更新当前样本点所属于的质心
+                 clusterChanged = True # 如果当前样本点不属于当前与之距离最小的质心，则说明簇分配结果仍需要改变
+             clusterAssment[i,:] = minIndex,minDist**2
+         print (centroids)
+         for cent in range(k):
+             ptsInClust = dataSet[nonzero(clusterAssment[:,0].A==cent)[0]]
+             centroids[cent,:] = mean(ptsInClust, axis=0) # 更新当前的质心为所有样本的平均值，axis = 0代表对列求平均值
+             return centroids, clusterAssment
+             # nonzero 返回的是矩阵中所有非零元素的坐标，坐标的行数与列数个存在一个数组或矩阵当中
+             # 矩阵支持检查元素的操作，所有可以写成matrix == int这种形式，返回的一个布尔型矩阵，代表矩阵相应位置有无此元素
+             # 这里指寻找当前质心下所聚类的样本
+
+
+def show(dataSet, k, centroids, clusterAssment):
+     numSamples, dim = dataSet.shape
+     mark = ['or', 'ob', 'og', 'ok', '^r', '+r', 'sr', 'dr', '<r', 'pr']
+     for i in range(numSamples):
+         markIndex = int(clusterAssment[i, 0])
+         plt.plot(dataSet[i, 0], dataSet[i, 1], mark[markIndex])
+         mark = ['Dr', 'Db', 'Dg', 'Dk', '^b', '+b', 'sb', 'db', '<b', 'pb']
+     for i in range(k):
+         plt.plot(centroids[i, 0], centroids[i, 1], mark[i], markersize = 12)
+     plt.show()
+
+def main():
+     dataMat = mat(loadDataSet('Iris.txt'))
+     myCentroids, clustAssing= kMeans(dataMat,3)
+     print (myCentroids)
+     show(dataMat, 3, myCentroids, clustAssing)
+if __name__ == '__main__':
+      main()
